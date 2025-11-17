@@ -103,7 +103,7 @@ The multiple regression model reveals:
 
 ### 1. Ratings vs Hours Viewed and Global Availability
 
-![Ratings vs Hours Viewed](./visualizations/Ratings_Vs_Hour-Viewed_and_Global_Availability.png)
+![Ratings vs Hours Viewed](https://github.com/hope-tatenda-mutema/Netflix-Movie-Rating-DV-Multiple-Linear-Regression-R/blob/main/Ratings%20Vs%20Hour-Viewed%20and%20Global%20Availability.png)
 
 This scatterplot reveals:
 - Relationship between viewing hours and movie ratings
@@ -115,7 +115,7 @@ This scatterplot reveals:
 
 ### 2. Ratings by Season and Comedy Genre
 
-![Ratings by Season](./visualizations/Ratings_by_Season_of_Release_and_Comedy.png)
+![Ratings by Season](https://github.com/hope-tatenda-mutema/Netflix-Movie-Rating-DV-Multiple-Linear-Regression-R/blob/main/Ratings%20by%20Season%20of%20Release%20and%20Comedy.png)
 
 Box plot analysis showing:
 - Rating distributions across four seasons (Fall, Spring, Summer, Winter)
@@ -127,7 +127,7 @@ Box plot analysis showing:
 
 ### 3. OLS Regression Diagnostics
 
-![OLS Assumptions](./visualizations/OLS_Assumptions_Check.png)
+![OLS Assumptions](https://github.com/hope-tatenda-mutema/Netflix-Movie-Rating-DV-Multiple-Linear-Regression-R/blob/main/OLS%20Assumptions%20Check.png)
 
 Comprehensive diagnostic plots:
 - **Residuals vs Fitted**: Checks linearity assumption
