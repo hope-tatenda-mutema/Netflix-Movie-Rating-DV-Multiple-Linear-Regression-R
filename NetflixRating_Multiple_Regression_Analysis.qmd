@@ -1,0 +1,250 @@
+---
+title: "Multiple Linear Regression Netflix Movie Ratings (DV)"
+author: "Hope Tatenda Mutema"
+format: html
+editor: visual
+---
+
+## Multiple Linear Regression
+
+# Loading Library
+
+```{r}
+#Required Packages 
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(summarytools)
+library(car)
+library(stargazer)
+library(pwr)
+```
+
+# Regression
+
+## Dependent variable Rating (Interval Ratio)
+
+```{r rating as dependent variable}
+#importing the data set for analysis
+netflix_data <- read.csv("~/Documents/My Data Analysis Portfolio/Netflix Ratings (DV) Multiple Linear Regression with R/total_netflix_2023 new.csv")
+
+netflix_data$RatingNum <- as.numeric(netflix_data$Rating) #create another numeric variable for rating (imputing the variable RatingNum) in the data set
+
+#cleaning the data removing the missing values
+netflix_data <- subset(netflix_data, !is.na(RatingNum))
+
+#Identified and removed 4 missing values in our Ratings variable 
+```
+
+## Independent Variable Genre
+
+-   created a dummy variables Comedy, Drama and Animation.
+
+-   I will be using the **reference group** as other genres not stated (**Other Genres)**
+
+```{r genre}
+#creating dummy variables
+netflix_data$genre_comedy <- ifelse(grepl("Comedy", netflix_data$Genre), 1, 0)
+netflix_data$genre_drama <- ifelse(grepl("Drama", netflix_data$Genre), 1, 0)
+netflix_data$genre_animation <- ifelse(grepl("Animation", netflix_data$Genre), 1, 0)
+```
+
+## Independent Variable Hours Viewed
+
+-   Changed hours viewed to millions for easier interpretation
+
+```{r viewing hours}
+#recoding hours viewed for easy interpretation
+netflix_data$Hours.Viewed <- as.numeric(netflix_data$Hours.Viewed)
+netflix_data$Hours.Viewed_mil <- netflix_data$Hours.Viewed / 1000000
+
+```
+
+## Independent Variable Release Season
+
+-   Grouped the months into seasons Winter (December, January, February), Spring (March, April, May), Summer (June, July, August) and Fall (September, October, November).
+
+-   Found 3695 observations with missing season values, and dropped the observations and left with 14633 observations which is a reliable representation of the whole population as it is greater than 60% of the data set.
+
+```{r}
+# Converting Release.Date to Date type
+netflix_data$Release.Date <- as.Date(netflix_data$Release.Date, format = "%Y-%m-%d")
+
+# Assign seasons only for rows with valid dates
+netflix_data$Season <- NA
+valid <- !is.na(netflix_data$Release.Date)
+netflix_data$Season[valid] <- ifelse(
+  month(netflix_data$Release.Date[valid]) %in% c(12, 1, 2), "Winter",
+  ifelse(
+    month(netflix_data$Release.Date[valid]) %in% c(3, 4, 5), "Spring",
+    ifelse(
+      month(netflix_data$Release.Date[valid]) %in% c(6, 7, 8), "Summer", "Fall"
+    )
+  )
+)
+
+
+#finding missing values for seasons in the dataset
+missing_seasons <- sum(is.na(netflix_data$Season))
+paste("There is a total of ", missing_seasons, " missing season observations in our data set")
+
+#now subsetting out data set to account for missing values
+#cleaning the data
+netflix_data <- subset(netflix_data, !is.na(Season))
+
+#now creating dummy variables
+
+#reference group is winter
+netflix_data$Season_Fall <- ifelse(grepl("Fall", netflix_data$Season), 1, 0)
+netflix_data$Season_Spring <- ifelse(grepl("Spring", netflix_data$Season), 1, 0)
+netflix_data$Season_Summer <- ifelse(grepl("Summer", netflix_data$Season), 1, 0)
+
+```
+
+# Summary Statistics
+
+```{r summary stats}
+
+#quantitative data
+descr(netflix_data$RatingNum)
+descr(netflix_data$Hours.Viewed_mil)
+
+
+#categorical
+available_glob_table <- table(netflix_data$Available.Globally.)
+available_glob_props <- round(prop.table(available_glob_table)*100,1)
+available_summary <- cbind(Frequency = available_glob_table, Proportion = round(available_glob_props, 3))
+
+# Add totals row
+total_freq_avail <- sum(available_glob_table)
+total_prop_avail <- sum(available_glob_props)
+available_summary_with_total <- rbind(available_summary, Total = c(total_freq_avail, total_prop_avail))
+
+available_summary_with_total
+
+
+#summary statistics for seasons
+season_counts <- table(netflix_data$Season)
+season_props <- round(prop.table(season_counts)*100,0)
+season_summary <- cbind(Frequency = season_counts, Proportion = round(season_props))
+
+# Add totals row
+total_freq <- sum(season_counts)
+total_prop <- sum(season_props)
+season_summary_with_total <- rbind(season_summary, Total = c(total_freq, total_prop))
+
+season_summary_with_total
+
+# For Comedy
+yes_comedy_count <- sum(netflix_data$genre_comedy == 1)
+yes_comedy_prop <- round(yes_comedy_count / length(netflix_data$genre_comedy) * 100, 1)
+
+data.frame(
+  Comedy = "Yes",
+  Frequency = yes_comedy_count,
+  Proportion = yes_comedy_prop
+)
+
+
+
+# For Drama
+yes_drama_count <- sum(netflix_data$genre_drama == 1)
+yes_drama_prop <- round(yes_drama_count / length(netflix_data$genre_drama) * 100, 1)
+
+data.frame(
+  Drama = "Yes",
+  Frequency = yes_drama_count,
+  Proportion = yes_drama_prop
+)
+
+
+# For Animation
+yes_animation_count <- sum(netflix_data$genre_animation == 1)
+yes_animation_prop <- round(yes_animation_count / length(netflix_data$genre_animation) * 100, 1)
+
+data.frame(
+  Animation = "Yes",
+  Frequency = yes_animation_count,
+  Proportion = yes_animation_prop
+)
+
+
+```
+
+# Multiple Linear Regression
+
+```{r multiple linear regression}
+#regression model
+
+movie_ratings_model <- lm(netflix_data$RatingNum ~ netflix_data$Available.Globally. + netflix_data$genre_comedy +netflix_data$genre_drama + netflix_data$genre_animation + netflix_data$Hours.Viewed_mil + netflix_data$Season_Fall + netflix_data$Season_Spring +netflix_data$Season_Summer)
+
+
+stargazer(type = 'text', movie_ratings_model, single.row = T)
+```
+
+# OLS Assumptions
+
+```{r quantitative}
+#Regresssion Diagnostics
+par(mfrow = c(2, 2))
+plot(movie_ratings_model)
+par(mfrow = c(1, 1))
+
+
+# Multicollinearity: VIF
+vif(movie_ratings_model)
+
+```
+
+# PQ plot
+
+```{r}
+library(ggplot2)
+
+#Hours viewed and Global Availability IV
+
+ggplot(netflix_data, aes(x = Hours.Viewed_mil, y = RatingNum, color = factor(Available.Globally.))) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method="lm", se=FALSE) +
+  labs(
+    title = "Ratings vs Hours-Viewed and Global-Availability",
+    x = "Hours Viewed (Millions)",
+    y = "Movie Rating",
+    color = "Global Availability"
+  ) +
+  theme(text = element_text(size = 16), legend.position = "top")
+
+
+#Season and commedy IV example
+ggplot(netflix_data, aes(x = Season, y = RatingNum, fill = factor(genre_comedy))) +
+  geom_boxplot() +
+  labs(
+    title = "Ratings by Season of Release and Comedy",
+    x = "Release Season",
+    y = "Movie Rating",
+    fill = "Comedy (0=No, 1=Yes)"
+  ) +
+  theme(text = element_text(size = 16), legend.position = "top")
+
+
+
+```
+
+# Power Analysis
+
+```{r power analysis}
+# Parameters for power analysis
+# u = number of predictors
+# v = total sample size minus number of predictors minus 1
+# f2 = effect size (Cohen's f^2), which is R2/(1-R2)
+# sig.level = alpha level
+# power = desired power (commonly 0.80)
+
+u <- 4  # number of predictors 
+v <- 14633 - u - 1  # sample size minus predictors minus 1
+R2 <- 0.001  # use your model's R-squared (change as needed)
+f2 <- R2 / (1 - R2)
+result <- pwr.f2.test(u = u, v = v, f2 = f2, sig.level = 0.05, power = NULL)
+result
+
+```
